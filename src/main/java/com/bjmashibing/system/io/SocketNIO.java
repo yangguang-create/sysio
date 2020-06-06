@@ -13,6 +13,8 @@ public class SocketNIO {
 
         LinkedList<SocketChannel> clients = new LinkedList<>();
 
+
+
         ServerSocketChannel ss = ServerSocketChannel.open();
         ss.bind(new InetSocketAddress(9090));
         ss.configureBlocking(false); //重点  OS  NONBLOCKING!!!
@@ -30,7 +32,7 @@ public class SocketNIO {
 
         while (true) {
             Thread.sleep(1000);
-            SocketChannel client = ss.accept(); //不会阻塞？  -1NULL
+            SocketChannel client = ss.accept(); //不会阻塞？  -1 NULL
 
             if (client == null) {
                 System.out.println("null.....");

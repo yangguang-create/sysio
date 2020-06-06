@@ -7,17 +7,13 @@ import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.StandardSocketOptions;
 
 /**
  * @author: 马士兵教育
  * @create: 2020-05-17 05:34
  * BIO  多线程的方式
- *
- *
  */
 public class SocketIOPropertites {
-
 
 
     //server socket listen property:
@@ -52,7 +48,7 @@ public class SocketIOPropertites {
         ServerSocket server = null;
         try {
             server = new ServerSocket();
-            server.bind(new InetSocketAddress( 9090), BACK_LOG);
+            server.bind(new InetSocketAddress(9090), BACK_LOG);
             server.setReceiveBufferSize(RECEIVE_BUFFER);
             server.setReuseAddress(REUSE_ADDR);
             server.setSoTimeout(SO_TIMEOUT);
@@ -61,9 +57,10 @@ public class SocketIOPropertites {
             e.printStackTrace();
         }
         System.out.println("server up use 9090!");
-        while (true) {
-            try {
-                System.in.read();  //分水岭：
+        try {
+            while (true) {
+
+                // System.in.read();  //分水岭：
 
                 Socket client = server.accept();
                 System.out.println("client port: " + client.getPort());
@@ -79,11 +76,12 @@ public class SocketIOPropertites {
 
                 new Thread(
                         () -> {
-                            while (true) {
-                                try {
-                                    InputStream in = client.getInputStream();
-                                    BufferedReader reader = new BufferedReader(new InputStreamReader(in));
-                                    char[] data = new char[1024];
+                            try {
+                                InputStream in = client.getInputStream();
+                                BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+                                char[] data = new char[1024];
+                                while (true) {
+
                                     int num = reader.read(data);
 
                                     if (num > 0) {
@@ -93,26 +91,29 @@ public class SocketIOPropertites {
                                         continue;
                                     } else {
                                         System.out.println("client readed -1...");
+                                        System.in.read();
                                         client.close();
                                         break;
                                     }
-
-                                } catch (IOException e) {
-                                    e.printStackTrace();
                                 }
+
+                            } catch (IOException e) {
+                                e.printStackTrace();
                             }
+
                         }
                 ).start();
 
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                server.close();
             } catch (IOException e) {
                 e.printStackTrace();
-            }finally {
-                try {
-                    server.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
             }
         }
+
     }
 }

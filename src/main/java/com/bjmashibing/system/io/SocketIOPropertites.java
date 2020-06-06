@@ -62,7 +62,7 @@ public class SocketIOPropertites {
 
                 // System.in.read();  //分水岭：
 
-                Socket client = server.accept();
+                Socket client = server.accept();  //阻塞的，没有 -1  一直卡着不动  accept(4,
                 System.out.println("client port: " + client.getPort());
 
                 client.setKeepAlive(CLI_KEEPALIVE);
@@ -74,6 +74,7 @@ public class SocketIOPropertites {
                 client.setSoTimeout(CLI_TIMEOUT);
                 client.setTcpNoDelay(CLI_NO_DELAY);
 
+                //client.read   //阻塞   没有  -1 0
                 new Thread(
                         () -> {
                             try {

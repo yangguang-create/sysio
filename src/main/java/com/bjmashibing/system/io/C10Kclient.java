@@ -21,11 +21,18 @@ public class C10Kclient {
 
                 SocketChannel client2 = SocketChannel.open();
 
+                /*
+                linux中你看到的连接就是：
+                client...port: 10508
+                client...port: 10508
+                 */
                 client1.bind(new InetSocketAddress("192.168.150.1", i));
+                //  192.168.150.1：10000   192.168.150.11：9090
                 client1.connect(serverAddr);
                 boolean c1 = client1.isOpen();
                 clients.add(client1);
                 client2.bind(new InetSocketAddress("192.168.110.100", i));
+                //  192.168.110.100：10000  192.168.150.11：9090
                 client2.connect(serverAddr);
                 boolean c2 = client2.isOpen();
                 clients.add(client2);

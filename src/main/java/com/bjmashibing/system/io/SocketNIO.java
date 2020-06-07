@@ -19,7 +19,7 @@ public class SocketNIO {
         ss.bind(new InetSocketAddress(9090));
         ss.configureBlocking(false); //重点  OS  NONBLOCKING!!!
 
-        ss.setOption(StandardSocketOptions.TCP_NODELAY, false);
+//        ss.setOption(StandardSocketOptions.TCP_NODELAY, false);
 //        StandardSocketOptions.TCP_NODELAY
 //        StandardSocketOptions.SO_KEEPALIVE
 //        StandardSocketOptions.SO_LINGER

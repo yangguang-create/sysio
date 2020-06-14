@@ -13,7 +13,7 @@ public class C10Kclient {
 
     public static void main(String[] args) {
         LinkedList<SocketChannel> clients = new LinkedList<>();
-        InetSocketAddress serverAddr = new InetSocketAddress("192.168.150.11", 9090);
+        InetSocketAddress serverAddr = new InetSocketAddress("127.0.0.1", 9999);
 
         for (int i = 10000; i < 65000; i++) {
             try {

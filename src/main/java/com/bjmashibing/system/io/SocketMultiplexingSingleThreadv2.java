@@ -33,21 +33,27 @@ public class SocketMultiplexingSingleThreadv2 {
         System.out.println("服务器启动了。。。。。");
         try {
             while (true) {
-                Set<SelectionKey> keys = selector.keys();
+//                Set<SelectionKey> keys = selector.keys();
 //                System.out.println(keys.size()+"   size");
-                while (selector.select(500) > 0) {
+                while (selector.select(50) > 0) {
                     Set<SelectionKey> selectionKeys = selector.selectedKeys();
                     Iterator<SelectionKey> iter = selectionKeys.iterator();
                     while (iter.hasNext()) {
                         SelectionKey key = iter.next();
                         iter.remove();
                         if (key.isAcceptable()) {
-
                             acceptHandler(key);
                         } else if (key.isReadable()) {
-                            key.cancel();
-                            readHandler(key);
-                        } else if(key.isWritable()){
+                            key.cancel();  //现在多路复用器里把key  cancel了
+                            readHandler(key);//还是阻塞的嘛？ 即便以抛出了线程去读取，但是在时差里，这个key的read事件会被重复触发
+
+                        } else if(key.isWritable()){  //我之前没讲过写的事件！！！！！
+                            //写事件<--  send-queue  只要是空的，就一定会给你返回可以写的事件，就会回调我们的写方法
+                            //你真的要明白：什么时候写？不是依赖send-queue是不是有空间
+                            //1，你准备好要写什么了，这是第一步
+                            //2，第二步你才关心send-queue是否有空间
+                            //3，so，读 read 一开始就要注册，但是write依赖以上关系，什么时候用什么时候注册
+                            //4，如果一开始就注册了write的事件，进入死循环，一直调起！！！
                             key.cancel();
                             writeHandler(key);
                         }
@@ -64,8 +70,6 @@ public class SocketMultiplexingSingleThreadv2 {
             System.out.println("write handler...");
             SocketChannel client = (SocketChannel) key.channel();
             ByteBuffer buffer = (ByteBuffer) key.attachment();
-
-
             buffer.flip();
             while (buffer.hasRemaining()) {
                 try {
@@ -117,10 +121,9 @@ public class SocketMultiplexingSingleThreadv2 {
             try {
                 while (true) {
                     read = client.read(buffer);
+                    System.out.println(Thread.currentThread().getName()+ " " + read);
                     if (read > 0) {
-
                         client.register(key.selector(),SelectionKey.OP_WRITE,buffer);
-
                     } else if (read == 0) {
                         break;
                     } else {

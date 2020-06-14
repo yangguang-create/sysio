@@ -16,6 +16,7 @@ public class NettyIO {
 
         NioEventLoopGroup boss = new NioEventLoopGroup(2);
         NioEventLoopGroup worker = new NioEventLoopGroup(2);
+
         ServerBootstrap boot = new ServerBootstrap();
 
         try {

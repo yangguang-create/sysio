@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Set;
 
@@ -56,6 +57,10 @@ public class SocketMultiplexingSingleThreadv1 {
                 2，epoll：  其实 内核的 epoll_wait()
                 *, 参数可以带时间：没有时间，0  ：  阻塞，有时间设置一个超时
                 selector.wakeup()  结果返回0
+
+                懒加载：
+                其实再触碰到selector.select()调用的时候触发了epoll_ctl的调用
+
                  */
                 while (selector.select(500) > 0) {
                     Set<SelectionKey> selectionKeys = selector.selectedKeys();  //返回的有状态的fd集合
@@ -75,7 +80,7 @@ public class SocketMultiplexingSingleThreadv1 {
                             //epoll： 我们希望通过epoll_ctl把新的客户端fd注册到内核空间
                             acceptHandler(key);
                         } else if (key.isReadable()) {
-                            readHandler(key);
+                            readHandler(key);  //连read 还有 write都处理了
                             //在当前线程，这个方法可能会阻塞  ，如果阻塞了十年，其他的IO早就没电了。。。
                             //所以，为什么提出了 IO THREADS
                             //redis  是不是用了epoll，redis是不是有个io threads的概念 ，redis是不是单线程的
@@ -136,6 +141,7 @@ public class SocketMultiplexingSingleThreadv1 {
             }
         } catch (IOException e) {
             e.printStackTrace();
+
         }
     }
 

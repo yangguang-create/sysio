@@ -9,6 +9,7 @@ import java.util.LinkedList;
 
 public class SocketNIO {
 
+    //  what   why  how
     public static void main(String[] args) throws Exception {
 
         LinkedList<SocketChannel> clients = new LinkedList<>();

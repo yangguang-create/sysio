@@ -21,10 +21,12 @@ public class SelectorThread implements   Runnable{
 
     Selector  selector = null;
     LinkedBlockingQueue<Channel> lbq = new LinkedBlockingQueue<>();
+    SelectorThreadGroup stg;
 
-    SelectorThread(){
+    SelectorThread(SelectorThreadGroup stg){
         try {
 
+            this.stg = stg;
             selector = Selector.open();
 
         } catch (IOException e) {
@@ -40,10 +42,10 @@ public class SelectorThread implements   Runnable{
         while (true){
             try {
                 //1,select()
-                System.out.println(Thread.currentThread().getName()+"   :  before select...."+ selector.keys().size());
+//                System.out.println(Thread.currentThread().getName()+"   :  before select...."+ selector.keys().size());
                 int nums = selector.select();  //阻塞  wakeup()
 //                Thread.sleep(1000);  //这绝对不是解决方案，我只是给你演示
-                System.out.println(Thread.currentThread().getName()+"   :  after select...." + selector.keys().size());
+//                System.out.println(Thread.currentThread().getName()+"   :  after select...." + selector.keys().size());
 
                 //2,处理selectkeys
                 if(nums>0){
@@ -65,17 +67,19 @@ public class SelectorThread implements   Runnable{
                     }
 
                 }
-                //3,处理一些task
+                //3,处理一些task :  listen  client
                 if(!lbq.isEmpty()){   //队列是个啥东西啊？ 堆里的对象，线程的栈是独立，堆是共享的
                     //只有方法的逻辑，本地变量是线程隔离的
                     Channel c = lbq.take();
                     if(c instanceof ServerSocketChannel){
                         ServerSocketChannel server = (ServerSocketChannel) c;
                         server.register(selector,SelectionKey.OP_ACCEPT);
+                        System.out.println(Thread.currentThread().getName()+" register listen");
                     }else if(c instanceof  SocketChannel){
                         SocketChannel client = (SocketChannel) c;
                         ByteBuffer buffer = ByteBuffer.allocateDirect(4096);
                         client.register(selector, SelectionKey.OP_READ, buffer);
+                        System.out.println(Thread.currentThread().getName()+" register client: " + client.getRemoteAddress());
 
                     }
                 }
@@ -97,6 +101,7 @@ public class SelectorThread implements   Runnable{
     }
 
     private void readHander(SelectionKey key) {
+        System.out.println(Thread.currentThread().getName()+" read......");
         ByteBuffer buffer = (ByteBuffer)key.attachment();
         SocketChannel client = (SocketChannel)key.channel();
         buffer.clear();
@@ -124,7 +129,7 @@ public class SelectorThread implements   Runnable{
     }
 
     private void acceptHandler(SelectionKey key) {
-        System.out.println("acceptHandler......");
+        System.out.println(Thread.currentThread().getName()+"   acceptHandler......");
 
         ServerSocketChannel server = (ServerSocketChannel)key.channel();
         try {
@@ -133,6 +138,7 @@ public class SelectorThread implements   Runnable{
 
             //choose a selector  and  register!!
 
+            stg.nextSelectorV2(client);
 
         } catch (IOException e) {
             e.printStackTrace();

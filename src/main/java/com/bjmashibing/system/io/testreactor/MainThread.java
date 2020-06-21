@@ -11,7 +11,7 @@ public class MainThread {
         //这里不做关于IO 和  业务的事情
 
         //1,创建 IO Thread  （一个或者多个）
-        SelectorThreadGroup stg = new SelectorThreadGroup(1);
+        SelectorThreadGroup stg = new SelectorThreadGroup(3);  //混杂模式
         //混杂模式，只有一个线程负责accept，每个都会被分配client，进行R/W
 //        SelectorThreadGroup stg = new SelectorThreadGroup(3);
 

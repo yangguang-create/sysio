@@ -23,7 +23,7 @@ public class SelectorThreadGroup {
         //num  线程数
         sts = new SelectorThread[num];
         for (int i = 0; i < num; i++) {
-            sts[i] = new SelectorThread();
+            sts[i] = new SelectorThread(this);
 
             new Thread(sts[i]).start();
         }
@@ -40,19 +40,36 @@ public class SelectorThreadGroup {
             server.bind(new InetSocketAddress(port));
 
             //注册到那个selector上呢？
-            nextSelector(server);
-
-
-
-
-
+            nextSelectorV2(server);
         } catch (IOException e) {
             e.printStackTrace();
         }
 
     }
 
-    private void nextSelector(Channel c) {
+
+    public void nextSelectorV2(Channel c) {
+
+            try {
+                if(c instanceof  ServerSocketChannel){
+                sts[0].lbq.put(c);
+                sts[0].selector.wakeup();
+                }else {
+                    SelectorThread st = nextV2();  //在 main线程种，取到堆里的selectorThread对象
+
+                    //1,通过队列传递数据 消息
+                    st.lbq.add(c);
+                    //2,通过打断阻塞，让对应的线程去自己在打断后完成注册selector
+                    st.selector.wakeup();
+
+                }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+
+    }
+    public void nextSelector(Channel c) {
         SelectorThread st = next();  //在 main线程种，取到堆里的selectorThread对象
 
         //1,通过队列传递数据 消息
@@ -60,6 +77,13 @@ public class SelectorThreadGroup {
         //2,通过打断阻塞，让对应的线程去自己在打断后完成注册selector
         st.selector.wakeup();
 
+//    public void nextSelector(Channel c) {
+//        SelectorThread st = next();  //在 main线程种，取到堆里的selectorThread对象
+//
+//        //1,通过队列传递数据 消息
+//        st.lbq.add(c);
+//        //2,通过打断阻塞，让对应的线程去自己在打断后完成注册selector
+//        st.selector.wakeup();
 
 
         //重点：  c有可能是 server  有可能是client
@@ -73,12 +97,17 @@ public class SelectorThreadGroup {
 //            e.printStackTrace();
 //        }
 
-
     }
+
+
 
     //无论 serversocket  socket  都复用这个方法
     private SelectorThread next() {
-        int index = xid.incrementAndGet() % sts.length;
+        int index = xid.incrementAndGet() % sts.length;  //轮询就会很尴尬，倾斜
         return sts[index];
+    }
+    private SelectorThread nextV2() {
+        int index = xid.incrementAndGet() % (sts.length-1);  //轮询就会很尴尬，倾斜
+        return sts[index+1];
     }
 }

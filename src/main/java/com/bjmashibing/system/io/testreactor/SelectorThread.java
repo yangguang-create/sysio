@@ -11,7 +11,7 @@ import java.util.concurrent.LinkedBlockingQueue;
  * @author: 马士兵教育
  * @create: 2020-06-21 20:14
  */
-public class SelectorThread implements   Runnable{
+public class SelectorThread  extends  ThreadLocal<LinkedBlockingQueue<Channel>>  implements   Runnable{
     // 每线程对应一个selector，
     // 多线程情况下，该主机，该程序的并发客户端被分配到多个selector上
     //注意，每个客户端，只绑定到其中一个selector
@@ -20,8 +20,14 @@ public class SelectorThread implements   Runnable{
 
 
     Selector  selector = null;
-    LinkedBlockingQueue<Channel> lbq = new LinkedBlockingQueue<>();
+//    LinkedBlockingQueue<Channel> lbq = new LinkedBlockingQueue<>();
+    LinkedBlockingQueue<Channel> lbq = get();  //lbq  在接口或者类中是固定使用方式逻辑写死了。你需要是lbq每个线程持有自己的独立对象
     SelectorThreadGroup stg;
+
+    @Override
+    protected LinkedBlockingQueue<Channel> initialValue() {
+        return new LinkedBlockingQueue<>();//你要丰富的是这里！  pool。。。
+    }
 
     SelectorThread(SelectorThreadGroup stg){
         try {

@@ -138,12 +138,17 @@ public class SelectorThread implements   Runnable{
 
             //choose a selector  and  register!!
 
-            stg.nextSelectorV2(client);
+            stg.nextSelectorV3(client);
+//            stg.nextSelectorV2(client);
 
         } catch (IOException e) {
             e.printStackTrace();
         }
 
 
+    }
+
+    public void setWorker(SelectorThreadGroup stgWorker) {
+        this.stg =  stgWorker;
     }
 }

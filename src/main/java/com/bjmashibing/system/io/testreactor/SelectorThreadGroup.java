@@ -12,12 +12,18 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author: 马士兵教育
  * @create: 2020-06-21 20:37
  */
-public class SelectorThreadGroup {
+public class SelectorThreadGroup {  //天生都是boss
 
     SelectorThread[] sts;
     ServerSocketChannel server=null;
     AtomicInteger xid = new AtomicInteger(0);
 
+    SelectorThreadGroup  stg =  this;
+
+    public void setWorker(SelectorThreadGroup  stg){
+        this.stg =  stg;
+
+    }
 
     SelectorThreadGroup(int num){
         //num  线程数
@@ -40,10 +46,35 @@ public class SelectorThreadGroup {
             server.bind(new InetSocketAddress(port));
 
             //注册到那个selector上呢？
-            nextSelectorV2(server);
+//            nextSelectorV2(server);
+            nextSelectorV3(server);
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+    }
+
+    public void nextSelectorV3(Channel c) {
+
+        try {
+            if(c instanceof  ServerSocketChannel){
+                SelectorThread st = next();  //listen 选择了 boss组中的一个线程后，要更新这个线程的work组
+                st.lbq.put(c);
+                st.setWorker(stg);
+                st.selector.wakeup();
+            }else {
+                SelectorThread st = nextV3();  //在 main线程种，取到堆里的selectorThread对象
+
+                //1,通过队列传递数据 消息
+                st.lbq.add(c);
+                //2,通过打断阻塞，让对应的线程去自己在打断后完成注册selector
+                st.selector.wakeup();
+
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
 
     }
 
@@ -109,5 +140,10 @@ public class SelectorThreadGroup {
     private SelectorThread nextV2() {
         int index = xid.incrementAndGet() % (sts.length-1);  //轮询就会很尴尬，倾斜
         return sts[index+1];
+    }
+
+    private SelectorThread nextV3() {
+        int index = xid.incrementAndGet() % stg.sts.length;  //动用worker的线程分配
+        return stg.sts[index];
     }
 }

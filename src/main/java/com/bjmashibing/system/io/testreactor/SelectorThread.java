@@ -22,6 +22,7 @@ public class SelectorThread  extends  ThreadLocal<LinkedBlockingQueue<Channel>> 
     Selector  selector = null;
 //    LinkedBlockingQueue<Channel> lbq = new LinkedBlockingQueue<>();
     LinkedBlockingQueue<Channel> lbq = get();  //lbq  在接口或者类中是固定使用方式逻辑写死了。你需要是lbq每个线程持有自己的独立对象
+
     SelectorThreadGroup stg;
 
     @Override
@@ -31,6 +32,7 @@ public class SelectorThread  extends  ThreadLocal<LinkedBlockingQueue<Channel>> 
 
     SelectorThread(SelectorThreadGroup stg){
         try {
+
 
             this.stg = stg;
             selector = Selector.open();

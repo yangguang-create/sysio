@@ -13,8 +13,10 @@ public class C10Kclient {
 
     public static void main(String[] args) {
         LinkedList<SocketChannel> clients = new LinkedList<>();
-        InetSocketAddress serverAddr = new InetSocketAddress("127.0.0.1", 9999);
+        InetSocketAddress serverAddr = new InetSocketAddress("192.168.150.11", 9090);
 
+        //端口号的问题：65535
+        //  windows
         for (int i = 10000; i < 65000; i++) {
             try {
                 SocketChannel client1 = SocketChannel.open();

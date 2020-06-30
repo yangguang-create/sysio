@@ -35,7 +35,7 @@ public class SocketMultiplexingSingleThreadv1_1 {
             while (true) {
 //                Set<SelectionKey> keys = selector.keys();
 //                System.out.println(keys.size()+"   size");
-                while (selector.select(50) > 0) {
+                while (selector.select() > 0) {
                     Set<SelectionKey> selectionKeys = selector.selectedKeys();
                     Iterator<SelectionKey> iter = selectionKeys.iterator();
                     while (iter.hasNext()) {

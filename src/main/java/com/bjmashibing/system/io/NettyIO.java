@@ -24,9 +24,13 @@ public class NettyIO {
                     .channel(NioServerSocketChannel.class)
                     .option(ChannelOption.TCP_NODELAY,false)
                     .childHandler(new ChannelInitializer<NioSocketChannel>() {
-                        @Override
+                            @Override
                         protected void initChannel(NioSocketChannel ch) throws Exception {
                             ChannelPipeline p = ch.pipeline();
+                            p.addLast(new MyInbound());
+                            p.addLast(new MyInbound());
+                            p.addLast(new MyInbound());
+                            p.addLast(new MyInbound());
                             p.addLast(new MyInbound());
 
                         }

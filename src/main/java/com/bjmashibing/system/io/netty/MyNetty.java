@@ -1,8 +1,11 @@
 package com.bjmashibing.system.io.netty;
 
+import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.*;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -154,6 +157,37 @@ public class MyNetty {
     }
 
     @Test
+    public void nettyClient() throws InterruptedException {
+
+        NioEventLoopGroup group = new NioEventLoopGroup(1);
+        Bootstrap bs = new Bootstrap();
+        ChannelFuture connect = bs.group(group)
+                .channel(NioSocketChannel.class)
+//                .handler(new ChannelInit())
+                .handler(new ChannelInitializer<SocketChannel>() {
+                    @Override
+                    protected void initChannel(SocketChannel ch) throws Exception {
+                        ChannelPipeline p = ch.pipeline();
+                        p.addLast(new MyInHandler());
+                    }
+                })
+                .connect(new InetSocketAddress("192.168.150.11", 9090));
+
+        Channel client = connect.sync().channel();
+
+        ByteBuf buf = Unpooled.copiedBuffer("hello server".getBytes());
+        ChannelFuture send = client.writeAndFlush(buf);
+        send.sync();
+
+        client.closeFuture().sync();
+
+    }
+
+
+
+
+
+    @Test
     public void serverMode() throws Exception {
 
         NioEventLoopGroup thread = new NioEventLoopGroup(1);
@@ -173,6 +207,32 @@ public class MyNetty {
 
 
     }
+
+    @Test
+    public void nettyServer() throws InterruptedException {
+        NioEventLoopGroup group = new NioEventLoopGroup(1);
+        ServerBootstrap bs = new ServerBootstrap();
+        ChannelFuture bind = bs.group(group, group)
+                .channel(NioServerSocketChannel.class)
+//                .childHandler(new ChannelInit())
+                .childHandler(new ChannelInitializer<NioSocketChannel>() {
+                    @Override
+                    protected void initChannel(NioSocketChannel ch) throws Exception {
+                        ChannelPipeline p = ch.pipeline();
+                        p.addLast(new MyInHandler());
+                    }
+                })
+                .bind(new InetSocketAddress("192.168.150.1", 9090));
+
+        bind.sync().channel().closeFuture().sync();
+
+    }
+
+
+
+
+
+
 
 }
 
@@ -219,7 +279,14 @@ class ChannelInit extends ChannelInboundHandlerAdapter{
         ChannelPipeline p = client.pipeline();
         p.addLast(new MyInHandler());//2,client::pipeline[ChannelInit,MyInHandler]
         ctx.pipeline().remove(this);
+        //3,client::pipeline[MyInHandler]
     }
+
+//    @Override
+//    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+//        System.out.println("haha");
+//        super.channelRead(ctx, msg);
+//    }
 }
 
 

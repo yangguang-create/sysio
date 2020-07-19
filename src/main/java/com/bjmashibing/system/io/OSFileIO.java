@@ -85,6 +85,7 @@ public class OSFileIO {
         //mmap  堆外  和文件映射的   byte  not  objtect
         MappedByteBuffer map = rafchannel.map(FileChannel.MapMode.READ_WRITE, 0, 4096);
 
+
         map.put("@@@".getBytes());  //不是系统调用  但是数据会到达 内核的pagecache
             //曾经我们是需要out.write()  这样的系统调用，才能让程序的data 进入内核的pagecache
             //曾经必须有用户态内核态切换

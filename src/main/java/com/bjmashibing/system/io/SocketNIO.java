@@ -16,9 +16,9 @@ public class SocketNIO {
 
 
 
-        ServerSocketChannel ss = ServerSocketChannel.open();
+        ServerSocketChannel ss = ServerSocketChannel.open();  //服务端开启监听：接受客户端
         ss.bind(new InetSocketAddress(9090));
-        ss.configureBlocking(false); //重点  OS  NONBLOCKING!!!
+        ss.configureBlocking(false); //重点  OS  NONBLOCKING!!!  //只让接受客户端  不阻塞
 
 //        ss.setOption(StandardSocketOptions.TCP_NODELAY, false);
 //        StandardSocketOptions.TCP_NODELAY

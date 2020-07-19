@@ -62,7 +62,7 @@ public class SocketMultiplexingSingleThreadv1 {
                 其实再触碰到selector.select()调用的时候触发了epoll_ctl的调用
 
                  */
-                while (selector.select(500) > 0) {
+                while (selector.select() > 0) {
                     Set<SelectionKey> selectionKeys = selector.selectedKeys();  //返回的有状态的fd集合
                     Iterator<SelectionKey> iter = selectionKeys.iterator();
                     //so，管你啥多路复用器，你呀只能给我状态，我还得一个一个的去处理他们的R/W。同步好辛苦！！！！！！！！

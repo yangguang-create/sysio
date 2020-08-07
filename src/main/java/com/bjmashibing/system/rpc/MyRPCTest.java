@@ -1,4 +1,4 @@
-package com.bjmashibing.system.io.netty;
+package com.bjmashibing.system.rpc;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
@@ -22,7 +22,6 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -76,7 +75,6 @@ public class MyRPCTest {
                         p.addLast(new ServerRequestHandler(dis));
                     }
                 }).bind(new InetSocketAddress("localhost", 9090));
-
         try {
             bind.sync().channel().closeFuture().sync();
         } catch (InterruptedException e) {
@@ -169,7 +167,8 @@ public class MyRPCTest {
                 //解决数据decode问题
                 //TODO：Server：： dispatcher  Executor
                 byte[] msgHeader = out.toByteArray();
-                System.out.println("old:::"+msgHeader.length);
+
+                System.out.println("main:::"+ msgHeader.length);
 
 
 
@@ -243,15 +242,13 @@ class MyCar implements Car {
     }
 }
 
-class MyFly implements Fly{
+class MyFly implements Fly {
 
     @Override
     public void xxoo(String msg) {
         System.out.println("server,get client arg:"+msg);
     }
 }
-
-
 
 
 class ServerDecode extends ByteToMessageDecoder{
@@ -387,7 +384,6 @@ class ServerRequestHandler extends ChannelInboundHandlerAdapter{
 }
 
 
-
 //源于 spark 源码
 class ClientFactory{
 
@@ -406,7 +402,7 @@ class ClientFactory{
 
     //一个consumer 可以连接很多的provider，每一个provider都有自己的pool  K,V
 
-    ConcurrentHashMap<InetSocketAddress,ClientPool> outboxs = new ConcurrentHashMap<>();
+    ConcurrentHashMap<InetSocketAddress, ClientPool> outboxs = new ConcurrentHashMap<>();
 
     public synchronized NioSocketChannel getClient(InetSocketAddress address){
 
@@ -456,6 +452,7 @@ class ClientFactory{
 
 
 }
+
 class ClientPool{
     NioSocketChannel[] clients;
     Object[] lock;
@@ -503,10 +500,6 @@ class ClientResponses  extends ChannelInboundHandlerAdapter{
 
     }
 }
-
-
-
-
 
 
 class Myheader implements Serializable{
@@ -597,13 +590,10 @@ class MyContent implements Serializable{
 }
 
 
-
-
-
-
 interface Car{
     public String ooxx(String msg);
 }
+
 interface Fly{
     void xxoo(String msg);
 }

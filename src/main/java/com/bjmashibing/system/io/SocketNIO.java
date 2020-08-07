@@ -14,8 +14,6 @@ public class SocketNIO {
 
         LinkedList<SocketChannel> clients = new LinkedList<>();
 
-
-
         ServerSocketChannel ss = ServerSocketChannel.open();  //服务端开启监听：接受客户端
         ss.bind(new InetSocketAddress(9090));
         ss.configureBlocking(false); //重点  OS  NONBLOCKING!!!  //只让接受客户端  不阻塞
@@ -40,11 +38,11 @@ public class SocketNIO {
             //NONBLOCKING 就是代码能往下走了，只不过有不同的情况
 
             if (client == null) {
-                System.out.println("null.....");
+             //   System.out.println("null.....");
             } else {
                 client.configureBlocking(false); //重点  socket（服务端的listen socket<连接请求三次握手后，往我这里扔，我去通过accept 得到  连接的socket>，连接socket<连接后的数据读写使用的> ）
                 int port = client.socket().getPort();
-                System.out.println("client...port: " + port);
+                System.out.println("client..port: " + port);
                 clients.add(client);
             }
 

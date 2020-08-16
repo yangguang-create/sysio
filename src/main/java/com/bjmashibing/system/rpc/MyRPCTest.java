@@ -1,5 +1,6 @@
 package com.bjmashibing.system.rpc;
 
+import com.bjmashibing.system.rpcdemo.proxy.MyProxy;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
@@ -85,7 +86,7 @@ public class MyRPCTest {
     }
 
 
-    //模拟comsumer端
+    //模拟comsumer端 && provider
     @Test
     public void get(){
 
@@ -101,7 +102,7 @@ public class MyRPCTest {
         Thread[] threads = new Thread[size];
         for (int i = 0; i <size; i++) {
             threads[i] = new Thread(()->{
-                Car car = proxyGet(Car.class);//动态代理实现
+                Car car = MyProxy.proxyGet(Car.class);//动态代理实现   //是真的要去触发 RPC调用吗？
                 String arg = "hello" + num.incrementAndGet();
                 String res = car.ooxx(arg);
                 System.out.println("client over msg: " + res+" src arg: "+ arg);
@@ -129,6 +130,7 @@ public class MyRPCTest {
 
     }
 
+
     public static <T>T proxyGet(Class<T>  interfaceInfo){
         //实现各个版本的动态代理。。。。
 
@@ -136,7 +138,7 @@ public class MyRPCTest {
         Class<?>[] methodInfo = {interfaceInfo};
 
 
-        return (T)Proxy.newProxyInstance(loader, methodInfo, new InvocationHandler() {
+        return (T) Proxy.newProxyInstance(loader, methodInfo, new InvocationHandler() {
             @Override
             public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
                 //如何设计我们的consumer对于provider的调用过程
@@ -203,8 +205,9 @@ public class MyRPCTest {
                 return res.get();//阻塞的
             }
         });
-    }
 
+
+    }
 
     public static Myheader createHeader(byte[] msg){
         Myheader header = new Myheader();

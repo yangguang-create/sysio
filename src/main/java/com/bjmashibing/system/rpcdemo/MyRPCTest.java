@@ -2,19 +2,38 @@ package com.bjmashibing.system.rpcdemo;
 
 import com.bjmashibing.system.rpcdemo.proxy.MyProxy;
 import com.bjmashibing.system.rpcdemo.rpc.Dispatcher;
+import com.bjmashibing.system.rpcdemo.rpc.protocol.MyContent;
+import com.bjmashibing.system.rpcdemo.rpc.protocol.Myheader;
+import com.bjmashibing.system.rpcdemo.rpc.transport.MyHttpRpcHandler;
 import com.bjmashibing.system.rpcdemo.rpc.transport.ServerDecode;
 import com.bjmashibing.system.rpcdemo.rpc.transport.ServerRequestHandler;
 import com.bjmashibing.system.rpcdemo.service.*;
+import com.bjmashibing.system.rpcdemo.util.SerDerUtil;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelPipeline;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.http.*;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.junit.Test;
 
+import javax.servlet.ServletException;
+import javax.servlet.ServletInputStream;
+import javax.servlet.ServletOutputStream;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -49,7 +68,9 @@ public class MyRPCTest {
 
         MyCar car = new MyCar();
         MyFly fly = new MyFly();
+
         Dispatcher dis = Dispatcher.getDis();
+
         dis.register(Car.class.getName(), car);
         dis.register(Fly.class.getName(), fly);
 
@@ -64,8 +85,70 @@ public class MyRPCTest {
                     protected void initChannel(NioSocketChannel ch) throws Exception {
                         System.out.println("server accept cliet port: " + ch.remoteAddress().getPort());
                         ChannelPipeline p = ch.pipeline();
-                        p.addLast(new ServerDecode());
-                        p.addLast(new ServerRequestHandler(dis));
+
+//                        //1，自定义的rpc
+//                        p.addLast(new ServerDecode());
+//                        p.addLast(new ServerRequestHandler(dis));
+                        //在自己定义协议的时候你关注过哪些问题：粘包拆包的问题，header+body
+
+                        //2，小火车，传输协议用的就是http了  <- 你可以自己学，字节节码byte[]
+                        //其实netty提供了一套编解码
+                        p.addLast(new HttpServerCodec())
+                                .addLast(new HttpObjectAggregator(1024*512))
+                                .addLast(new ChannelInboundHandlerAdapter(){
+                                    @Override
+                                    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                                        //http 协议 ,  这个msg是一个啥：完整的http-request
+                                        FullHttpRequest request = (FullHttpRequest) msg;
+                                        System.out.println(request.toString());  //因为现在sonsumer使用的是一个现成的URL
+
+
+                                        //这个就是consumer 序列化的MyContent
+                                        ByteBuf content = request.content();
+                                        byte[]  data = new byte[content.readableBytes()];
+                                        content.readBytes(data);
+                                        ObjectInputStream oin = new ObjectInputStream(new ByteArrayInputStream(data));
+                                        MyContent myContent = (MyContent)oin.readObject();
+
+                                        String serviceName = myContent.getName();
+                                        String method = myContent.getMethodName();
+                                        Object c = dis.get(serviceName);
+                                        Class<?> clazz = c.getClass();
+                                        Object res = null;
+                                        try {
+
+
+                                            Method m = clazz.getMethod(method, myContent.getParameterTypes());
+                                            res = m.invoke(c, myContent.getArgs());
+
+
+                                        } catch (NoSuchMethodException e) {
+                                            e.printStackTrace();
+                                        } catch (IllegalAccessException e) {
+                                            e.printStackTrace();
+                                        } catch (InvocationTargetException e) {
+                                            e.printStackTrace();
+                                        }
+
+
+                                        MyContent resContent = new MyContent();
+                                        resContent.setRes(res);
+                                        byte[] contentByte = SerDerUtil.ser(resContent);
+
+                                        DefaultFullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_0,
+                                                HttpResponseStatus.OK,
+                                                Unpooled.copiedBuffer(contentByte));
+
+                                        response.headers().set(HttpHeaderNames.CONTENT_LENGTH,contentByte.length);
+
+                                        //http协议，header+body
+                                        ctx.writeAndFlush(response);
+
+
+                                    }
+                                });
+
+
                     }
                 }).bind(new InetSocketAddress("localhost", 9090));
         try {
@@ -75,6 +158,32 @@ public class MyRPCTest {
         }
 
 
+    }
+
+
+    @Test
+    public void startHttpServer(){
+        MyCar car = new MyCar();
+        MyFly fly = new MyFly();
+
+        Dispatcher dis = Dispatcher.getDis();
+
+        dis.register(Car.class.getName(), car);
+        dis.register(Fly.class.getName(), fly);
+
+
+        //tomcat jetty  【servlet】
+        Server server = new Server(new InetSocketAddress("localhost", 9090));
+        ServletContextHandler handler = new ServletContextHandler(server, "/");
+        server.setHandler(handler);
+        handler.addServlet(MyHttpRpcHandler.class,"/*");  //web.xml
+
+        try {
+            server.start();
+            server.join();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
 
@@ -113,10 +222,18 @@ public class MyRPCTest {
 
     @Test
     public void testRPC() {
+
         Car car = MyProxy.proxyGet(Car.class);
         Persion zhangsan = car.oxox("zhangsan", 16);
         System.out.println(zhangsan);
     }
+
+
+
+
+
+
+
 
     @Test
     public void testRpcLocal() {
@@ -130,5 +247,7 @@ public class MyRPCTest {
         Persion zhangsan = car.oxox("zhangsan", 16);
         System.out.println(zhangsan);
     }
+
+
 
 }

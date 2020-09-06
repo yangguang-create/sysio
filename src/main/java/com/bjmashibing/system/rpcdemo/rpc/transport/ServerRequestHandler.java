@@ -33,23 +33,6 @@ public class ServerRequestHandler extends ChannelInboundHandlerAdapter {
 
         Packmsg requestPkg = (Packmsg) msg;
 
-//        System.out.println("server handler :"+ requestPkg.content.getArgs()[0]);
-
-        //如果假设处理完了，要给客户端返回了~！！！
-        //你需要注意哪些环节~！！！！！！！！
-
-        //bytebuf
-        //因为是个RPC吗，你得有requestID！！！！
-        //在client那一侧也要解决解码问题
-
-        //关注rpc通信协议  来的时候flag 0x14141414
-
-        //有新的header+content
-        String ioThreadName = Thread.currentThread().getName();
-        //1,直接在当前方法 处理IO和业务和返回
-
-        //3，自己创建线程池
-        //2,使用netty自己的eventloop来处理业务及返回
         ctx.executor().execute(new Runnable() {
 //        ctx.executor().parent().next().execute(new Runnable() {
 

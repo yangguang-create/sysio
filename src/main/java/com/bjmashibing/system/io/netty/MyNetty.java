@@ -101,7 +101,7 @@ public class MyNetty {
 
     @Test
     public void loopExecutor() throws Exception {
-        //group  线程池
+        //group就是线程池的概念
         NioEventLoopGroup selector = new NioEventLoopGroup(2);
         selector.execute(()->{
             try {

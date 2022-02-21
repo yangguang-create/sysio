@@ -169,26 +169,29 @@ public class MyNetty {
     public void nettyClient() throws InterruptedException {
 
         NioEventLoopGroup group = new NioEventLoopGroup(1);
+        //自己实现的时候，需要关注client的注册，读取等前后顺序，还需要关注相关方法的异步问题.
+        //netty准备了bootstrap.来简化一些细节.
         Bootstrap bs = new Bootstrap();
-        ChannelFuture connect = bs.group(group)
-                .channel(NioSocketChannel.class)
-//                .handler(new ChannelInit())
+        ChannelFuture connect = bs.group(group)//添加到selector
+                .channel(NioSocketChannel.class)//准备socketchannel
+//                .handler(new ChannelInit())//未来客户端一连接，需要由什么handler处理
                 .handler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     protected void initChannel(SocketChannel ch) throws Exception {
                         ChannelPipeline p = ch.pipeline();
                         p.addLast(new MyInHandler());
                     }
-                })
-                .connect(new InetSocketAddress("192.168.150.11", 9090));
+                })//官方的写法，预埋的handler
+                .connect(new InetSocketAddress("192.168.150.11", 9090));//连接
 
-        Channel client = connect.sync().channel();
+        Channel client = connect.sync().channel();//保证连接成功
 
+        //服务端向客户端发送数据.
         ByteBuf buf = Unpooled.copiedBuffer("hello server".getBytes());
         ChannelFuture send = client.writeAndFlush(buf);
         send.sync();
 
-        client.closeFuture().sync();
+        client.closeFuture().sync();//关注客户端关闭的事件
 
     }
 

@@ -11,7 +11,7 @@ public class MainThread {
         //这里不做关于IO 和  业务的事情
 
         //1,创建 IO Thread  （一个或者多个）
-        SelectorThreadGroup boss = new SelectorThreadGroup(3);  //混杂模式
+        SelectorThreadGroup boss = new SelectorThreadGroup(3);  //混杂模式：混杂指的是一个线程可能既负责接收，又负责读写。也就是既是boss，又是worker.
         //boss有自己的线程组
 
         SelectorThreadGroup worker = new SelectorThreadGroup(3);  //混杂模式

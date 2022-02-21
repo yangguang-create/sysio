@@ -50,6 +50,8 @@ public class OSFileIO {
 
     //测试buffer文件IO
     //  jvm  8kB   syscall  write(8KBbyte[])
+    // jvm 维护了一个8kb的字节数组，每次写的时候，会先往这个字节数组里面写，数组满了的时候，才会调用系统调用.
+    //不会每次直接调用系统调用.减少了用户态和内核态之间的切换。从而加快。
 
     public static void testBufferedFileIO() throws Exception {
         File file = new File(path);

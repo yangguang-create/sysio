@@ -13,9 +13,15 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/*
+*   多路复用之多线程的模式，更好的方式。
+* */
 public class SocketMultiplexingThreads {
 
     private ServerSocketChannel server = null;
+    //准备了三个selector，每个selector都会处理一部分的FD,然后放到一个线程中处理。
+    //在每个selector中，是线性处理的。
+    //整体上来看，最终是并行的FD被处理.
     private  Selector selector1 = null;
     private  Selector selector2 = null;
     private  Selector selector3 = null;

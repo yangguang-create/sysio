@@ -295,6 +295,7 @@ class  MyAcceptHandler  extends ChannelInboundHandlerAdapter{
 }
 
 //为啥要有一个inithandler，可以没有，但是MyInHandler就得设计成单例.
+//不处理业务，只处理被注册之后，在管道中添加处理数据的handler即可，而且，每个客户端添加的都是一个新new 出来的handler
 @ChannelHandler.Sharable
 class ChannelInit extends ChannelInboundHandlerAdapter{
 

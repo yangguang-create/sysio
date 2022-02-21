@@ -230,9 +230,11 @@ public class MyNetty {
     @Test
     public void nettyServer() throws InterruptedException {
         NioEventLoopGroup group = new NioEventLoopGroup(1);
-        ServerBootstrap bs = new ServerBootstrap();
-        ChannelFuture bind = bs.group(group, group)
-                .channel(NioServerSocketChannel.class)
+        ServerBootstrap bs = new ServerBootstrap();//服务端使用的是ServerBootstrap
+
+        //服务端不需要acceptHandler了，因为，在netty内部帮我们做了.
+        ChannelFuture bind = bs.group(group, group)//添加的时候，需要两个group，一个是boss：用来做accept，一个是worker
+                .channel(NioServerSocketChannel.class)//服务端的对象NioServerSocketChannel
 //                .childHandler(new ChannelInit())
                 .childHandler(new ChannelInitializer<NioSocketChannel>() {
                     @Override
@@ -243,6 +245,9 @@ public class MyNetty {
                 })
                 .bind(new InetSocketAddress("192.168.150.1", 9090));
 
+        //sync():等着绑定成功.
+        //closeFuture():等着关闭.
+        //sync():服务端阻塞.
         bind.sync().channel().closeFuture().sync();
 
     }

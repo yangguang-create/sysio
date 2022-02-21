@@ -193,25 +193,32 @@ public class MyNetty {
     }
 
 
-
-
-
+    /**
+     * 服务端的写法：
+     * 不论是客户端，还是服务端，在netty中都是基于响应式的多路复用器的事件驱动模型.
+     * 所以：服务端也应该是由事件驱动的。
+     * @throws Exception
+     */
     @Test
     public void serverMode() throws Exception {
 
-        NioEventLoopGroup thread = new NioEventLoopGroup(1);
+        NioEventLoopGroup thread = new NioEventLoopGroup(1);//多路复用器
         NioServerSocketChannel server = new NioServerSocketChannel();
 
 
-        thread.register(server);
-        //指不定什么时候家里来人。。响应式
+        thread.register(server);//并把server注册到多路复用器中
+
+        //指不定什么时候家里来人。。响应式：需要响应式方式来接收客户端的连接。
         ChannelPipeline p = server.pipeline();
-        p.addLast(new MyAcceptHandler(thread,new ChannelInit()));  //accept接收客户端，并且注册到selector
+        //在pipeline中预埋未来事件发生该怎么处理的handler。
+        p.addLast(new MyAcceptHandler(thread,new ChannelInit()));  //accept接收客户端，并且注册到selector：不仅要接收，还要把接收的客户端注册到selector.
 //        p.addLast(new MyAcceptHandler(thread,new MyInHandler()));  //accept接收客户端，并且注册到selector
+
+        //绑定的时候，需要得到绑定的结果，避免直接退出.
         ChannelFuture bind = server.bind(new InetSocketAddress("192.168.150.1", 9090));
 
 
-        bind.sync().channel().closeFuture().sync();
+        bind.sync().channel().closeFuture().sync();//等待服务端关闭后才关闭.
         System.out.println("server close....");
 
 
@@ -245,7 +252,9 @@ public class MyNetty {
 
 }
 
-
+/**
+ * 服务端应该处理的Handler。
+ */
 class  MyAcceptHandler  extends ChannelInboundHandlerAdapter{
 
 
@@ -262,11 +271,18 @@ class  MyAcceptHandler  extends ChannelInboundHandlerAdapter{
         System.out.println("server registerd...");
     }
 
+    /**
+     * 对于服务端的listen状态的socket来说，读到的是客户端连接过来的socket。
+     * @param ctx
+     * @param msg
+     * @throws Exception
+     */
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        //  listen  socket   accept    client
+        //  listen  socket   只能accept,读不到消息    client的socket，只能用来读数据.
         //  socket           R/W
-        SocketChannel client = (SocketChannel) msg;  //accept  我怎么没调用额？
+        //在listen的状态中，读到的是客户端连进来的Socket
+        SocketChannel client = (SocketChannel) msg;  //accept接收的操作框架给我们做了.所以：应该找到框架中哪一步做的接收操作。对于server来说，是accept(),对于客户端来说，是read().
         //2，响应式的  handler
         ChannelPipeline p = client.pipeline();
         p.addLast(handler);  //1,client::pipeline[ChannelInit,]
@@ -278,10 +294,17 @@ class  MyAcceptHandler  extends ChannelInboundHandlerAdapter{
     }
 }
 
-//为啥要有一个inithandler，可以没有，但是MyInHandler就得设计成单例
+//为啥要有一个inithandler，可以没有，但是MyInHandler就得设计成单例.
 @ChannelHandler.Sharable
 class ChannelInit extends ChannelInboundHandlerAdapter{
 
+    /**
+     * ChannelInit是第一个Handler,在pipeline中是第一个handler，
+     *  accept注册完了后，会调用channelRegistered()，这个方法中，
+     *  就在管道中在放一个管道.
+     * @param ctx
+     * @throws Exception
+     */
     @Override
     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
         Channel client = ctx.channel();
@@ -300,6 +323,10 @@ class ChannelInit extends ChannelInboundHandlerAdapter{
 
 
 /*
+acceptHandler一般都是由框架来实现，
+读写数据的Handler一般都是由用户自己实现.
+所以，不能给用户代码增加限制.
+    可以让客户端，每次使用这个handler的时候，都是new 的新的，这样，多个连接就不会共用这一个handler了。
 就是用户自己实现的，你能说让用户放弃属性的操作吗
 @ChannelHandler.Sharable  不应该被强压给coder
  */

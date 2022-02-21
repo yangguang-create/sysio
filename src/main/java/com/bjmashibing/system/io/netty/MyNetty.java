@@ -39,15 +39,16 @@ public class MyNetty {
     目的：前边 NIO 逻辑
     恶心的版本---依托着前面的思维逻辑
     channel  bytebuffer  selector
-    bytebuffer   bytebuf【pool】
+    bytebuffer ---> 在netty中对应的是 bytebuf【pool】在netty中是池化的概念.
      */
 
 
     @Test
     public void myBytebuf(){
 
+        //分配内存的方式：总体来说是：是否池化，堆内的，堆外的.
 //        ByteBuf buf = ByteBufAllocator.DEFAULT.buffer(8, 20);
-        //pool
+        //pool：非池化的分配
 //        ByteBuf buf = UnpooledByteBufAllocator.DEFAULT.heapBuffer(8, 20);
         ByteBuf buf = PooledByteBufAllocator.DEFAULT.heapBuffer(8, 20);
         print(buf);
@@ -62,6 +63,7 @@ public class MyNetty {
         print(buf);
          buf.writeBytes(new byte[]{1,2,3,4});
         print(buf);
+        //超过会报错.writerIndex(20) + minWritableBytes(4) exceeds maxCapacity(20): PooledUnsafeHeapByteBuf(ridx: 0, widx: 20, cap: 20/20)
         buf.writeBytes(new byte[]{1,2,3,4});
         print(buf);
 

@@ -132,26 +132,33 @@ public class MyNetty {
 
     @Test
     public void clientMode() throws Exception {
+        //NiOEventLoopGroup相当于一个线程，这个线程中有一个多路复用器selector.
         NioEventLoopGroup thread = new NioEventLoopGroup(1);
 
         //客户端模式：
         NioSocketChannel client = new NioSocketChannel();
 
-        thread.register(client);  //epoll_ctl(5,ADD,3)
+        //将client注册到多路复用器中.
+        thread.register(client);  //epoll_ctl(5,ADD,3):把3注册到5中.
 
-        //响应式：
-        ChannelPipeline p = client.pipeline();
+        //响应式：响应服务器发送过来的事件。
+        ChannelPipeline p = client.pipeline();//通过pipeline()得到读事件，读事件触发后，会多路复用器会调用针对读事件的Handler
         p.addLast(new MyInHandler());
 
-        //reactor  异步的特征
+        //发送的操作
+        //reactor  异步的特征:每一步操作大部分都是异步的，比如，连接这不操作就是异步的.连上了，但是数据没有发送过来.
         ChannelFuture connect = client.connect(new InetSocketAddress("192.168.150.11", 9090));
+        //保证连接成功
         ChannelFuture sync = connect.sync();
 
         ByteBuf buf = Unpooled.copiedBuffer("hello server".getBytes());
+        //发送数据也是异步的.
         ChannelFuture send = client.writeAndFlush(buf);
+        //保证发送成功
         send.sync();
 
         //马老师的多线程
+        //处理异步的问题，避免客户端退出.
         sync.channel().closeFuture().sync();
 
         System.out.println("client over....");
@@ -298,22 +305,42 @@ class ChannelInit extends ChannelInboundHandlerAdapter{
  */
 class MyInHandler extends ChannelInboundHandlerAdapter {
 
+    /**
+     * channel的注册成功的方法
+     * @param ctx
+     * @throws Exception
+     */
     @Override
     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
         System.out.println("client  registed...");
     }
 
+    /**
+     *判断channel是否 存活
+     * @param ctx
+     * @throws Exception
+     */
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         System.out.println("client active...");
     }
 
+    /**
+     * 读取服务端的内容.
+     * @param ctx
+     * @param msg
+     * @throws Exception
+     */
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        //netty把客户端发送过来的内容转换成ByteBuf.
         ByteBuf buf = (ByteBuf) msg;
-//        CharSequence str = buf.readCharSequence(buf.readableBytes(), CharsetUtil.UTF_8);
+        //read write 操作ByteBuf的时候，会移动Buf的指针.
+        //get set 操作ByteBuf的时候，不会移动指针.
+//        CharSequence str = buf.readCharSequence(buf.readableBytes(), CharsetUtil.UTF_8);//读成字符序列.
         CharSequence str = buf.getCharSequence(0,buf.readableBytes(), CharsetUtil.UTF_8);
         System.out.println(str);
+        //接收完后，可以继续对服务器写。
         ctx.writeAndFlush(buf);
     }
 }

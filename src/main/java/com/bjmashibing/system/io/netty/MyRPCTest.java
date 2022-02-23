@@ -51,7 +51,9 @@ public class MyRPCTest {
     //多多包涵，如果一会翻车，请不要打脸。。。。。
 
 
-
+    /**
+     * server端的代码.
+     */
     @Test
     public void startServer(){
 
@@ -91,6 +93,10 @@ public class MyRPCTest {
     @Test
     public void get(){
 
+        /**
+         * 把服务端跑起来.
+         *
+         */
         new Thread(()->{
             startServer();
         }).start();
@@ -101,6 +107,11 @@ public class MyRPCTest {
         AtomicInteger  num = new AtomicInteger(0);
         int size = 50;
         Thread[] threads = new Thread[size];
+        /**
+         * 目前的情况是: 20个线程，去调用代理方法，然后获取连接池，再获取客户端的连接。
+         *
+         *  说先抢到连接，谁先用，抢不到的等待.
+         */
         for (int i = 0; i <size; i++) {
             threads[i] = new Thread(()->{
                 Car car = proxyGet(Car.class);//动态代理实现
@@ -178,6 +189,8 @@ public class MyRPCTest {
 
                 //3，连接池：：取得连接
                 ClientFactory factory = ClientFactory.getFactory();
+
+                //找到改地址绑定的连接.
                 NioSocketChannel clientChannel = factory.getClient(new InetSocketAddress("localhost", 9090));
                 //获取连接过程中： 开始-创建，过程-直接取
 
@@ -406,23 +419,30 @@ class ClientFactory{
 
     //一个consumer 可以连接很多的provider，每一个provider都有自己的pool  K,V
 
+    //一个地址可以绑定很多个连接池.一个客户端可以连接很多的服务器.
     ConcurrentHashMap<InetSocketAddress,ClientPool> outboxs = new ConcurrentHashMap<>();
 
     public synchronized NioSocketChannel getClient(InetSocketAddress address){
 
         ClientPool clientPool = outboxs.get(address);
         if(clientPool ==  null){
+            //多线程情况下，没有连接池，就创建一个连接池.
             outboxs.putIfAbsent(address,new ClientPool(poolSize));
+            //此时池子里面还有连接.
             clientPool =  outboxs.get(address);
         }
 
         int i = rand.nextInt(poolSize);
 
+        //随机得到池中的连接，且该链接是活动的.
        if( clientPool.clients[i] != null && clientPool.clients[i].isActive()){
            return clientPool.clients[i];
        }
 
+       //前面的验证都没有找到连接池中对应的连接.
        synchronized (clientPool.lock[i]){
+
+           //创建连接.返回的是客户端的连接
            return clientPool.clients[i] = create(address);
        }
 
@@ -430,7 +450,7 @@ class ClientFactory{
 
     private NioSocketChannel create(InetSocketAddress address){
 
-        //基于 netty 的客户端创建方式
+        //基于 netty 的客户端创建方式：目前只有一个连接
         clientWorker = new NioEventLoopGroup(1);
         Bootstrap bs = new Bootstrap();
         ChannelFuture connect = bs.group(clientWorker)
@@ -440,7 +460,7 @@ class ClientFactory{
                     protected void initChannel(NioSocketChannel ch) throws Exception {
                         ChannelPipeline p = ch.pipeline();
                         p.addLast(new ServerDecode());
-                        p.addLast(new ClientResponses());  //解决给谁的？？  requestID..
+                        p.addLast(new ClientResponses());  //解决给谁的？？  通过requestID返回给对应的客户端..
                     }
                 }).connect(address);
         try {
@@ -496,10 +516,11 @@ class ClientResponses  extends ChannelInboundHandlerAdapter{
     //consumer.....
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        //服务端返回的数据.
         Packmsg responsepkg = (Packmsg) msg;
 
         //曾经我们没考虑返回的事情
-            ResponseMappingCallback.runCallBack(responsepkg);
+        ResponseMappingCallback.runCallBack(responsepkg);
 
     }
 }

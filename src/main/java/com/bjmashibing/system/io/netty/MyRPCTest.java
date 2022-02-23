@@ -265,15 +265,31 @@ class MyFly implements Fly{
 }
 
 
-
-
+/**
+ * netty自带的解码器。解决在客户端发送数据包的时候，可以在发送前，解析自己发送的包。
+ * 需要自己定义解码规则。
+ * 不但是解码器，还是Handler.
+ */
 class ServerDecode extends ByteToMessageDecoder{
 
     //父类里一定有channelread{  前老的拼buf  decode（）；剩余留存 ;对out遍历 } -> bytebuf
     //因为你偷懒，自己能不能实现！
+
+    /**
+     *
+     * @param ctx
+     * @param buf   : 就是每次发送给服务器端的buffer.解码就是针对这个初始容量进行解码。
+     * @param out   : 把取出来的单个数据包可以再次封装成对象扔到List中，这样，服务器处理的时候，可以直接拿出对象进行处理.
+     * @throws Exception
+     */
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf buf, List<Object> out) throws Exception {
 
+        /**
+         * 对于每个消息包，我们只处理长度在buffer大小范围内的数据，对于超出buffer长度的数据包，交给netty框架处理。
+         * netty的做法是，将超出的数据包，和下一次来的数据包一起拼接成新的buffer。
+         * 留着下次decode()一起处理.
+         */
         while(buf.readableBytes() >= 110) {
             byte[] bytes = new byte[110];
             buf.getBytes(buf.readerIndex(),bytes);  //从哪里读取，读多少，但是readindex不变
@@ -338,16 +354,17 @@ class ServerRequestHandler extends ChannelInboundHandlerAdapter{
         //因为是个RPC吗，你得有requestID！！！！
         //在client那一侧也要解决解码问题
 
-        //关注rpc通信协议  来的时候flag 0x14141414
+        //关注rpc通信协议  来的时候flag 0x14141414; 返回数据包的时候，也应该有标志位。
 
-        //有新的header+content
+        //新的msg(也就是response)应该有新的header+content
         String ioThreadName = Thread.currentThread().getName();
-        //1,直接在当前方法 处理IO和业务和返回
+        //1,直接在当前方法 处理IO和业务和返回，是一种方案.
 
-        //3，自己创建线程池
-        //2,使用netty自己的eventloop来处理业务及返回
-        ctx.executor().execute(new Runnable() {
-//        ctx.executor().parent().next().execute(new Runnable() {
+        //3，自己创建线程池来处理业务也可.
+        //2,使用netty自己的eventloop来处理业务及返回:使用netty的ctx对象的自带的线程池处理也可以.
+        ctx.executor().execute(new Runnable() {//(1)虽然在当前eventloopgroup中，看似交给了新线程，但是整个流程还是放在了一个eventloopgroup中处理。
+                                               // netty会把所有的数据包在一个group中先完成第二步，然后在把所有第二步动作交给第三步.
+//        ctx.executor().parent().next().execute(new Runnable() {//(2)把所有的task,放到其他的eventloopgroup中处理：让其他线程处理.
 
             @Override
             public void run() {

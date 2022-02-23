@@ -362,6 +362,12 @@ class ServerRequestHandler extends ChannelInboundHandlerAdapter{
 
         //3，自己创建线程池来处理业务也可.
         //2,使用netty自己的eventloop来处理业务及返回:使用netty的ctx对象的自带的线程池处理也可以.
+
+        //数据到达server端的方式有四种
+        //<1>:在当前线程中处理
+        //<2>:自己实现线程池
+        //<3>:使用netty自己的线程池.其实还是在一个IO线程中处理所有内容
+        //<4>:将业务分给其他NIOSelectorGroup中的selector对应的 线程，复用其他selector.
         ctx.executor().execute(new Runnable() {//(1)虽然在当前eventloopgroup中，看似交给了新线程，但是整个流程还是放在了一个eventloopgroup中处理。
                                                // netty会把所有的数据包在一个group中先完成第二步，然后在把所有第二步动作交给第三步.
 //        ctx.executor().parent().next().execute(new Runnable() {//(2)把所有的task,放到其他的eventloopgroup中处理：让其他线程处理.

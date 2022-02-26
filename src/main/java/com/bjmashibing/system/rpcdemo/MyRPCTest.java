@@ -86,21 +86,23 @@ public class MyRPCTest {
                         System.out.println("server accept cliet port: " + ch.remoteAddress().getPort());
                         ChannelPipeline p = ch.pipeline();
 
-//                        //1，自定义的rpc
+//                        //1，自定义的rpc：需要自己对请求的数据包进行编解码然后处理请求的的handler.
 //                        p.addLast(new ServerDecode());
 //                        p.addLast(new ServerRequestHandler(dis));
                         //在自己定义协议的时候你关注过哪些问题：粘包拆包的问题，header+body
 
-                        //2，小火车，传输协议用的就是http了  <- 你可以自己学，字节节码byte[]
-                        //其实netty提供了一套编解码
+                        //2，小火车，传输协议用的就是http了  <- 你可以自己学，自己解码网络上传输的byte[]
+                        //其实netty提供了一套编解码：HttpObjectAggregator
                         p.addLast(new HttpServerCodec())
                                 .addLast(new HttpObjectAggregator(1024*512))
                                 .addLast(new ChannelInboundHandlerAdapter(){
                                     @Override
                                     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                                        //http 协议 ,  这个msg是一个啥：完整的http-request
+                                        //现在使用的是http 协议 ,  这个msg是一个啥：完整的http-request：应该是一个完整的http请求.
+                                        //经过内在的编解码处理器处理之后，给到的就是封装好的HttpRequest对象.
                                         FullHttpRequest request = (FullHttpRequest) msg;
-                                        System.out.println(request.toString());  //因为现在sonsumer使用的是一个现成的URL
+
+                                        System.out.println(request.toString());  //因为现在consumer使用的是一个现成的URL
 
 
                                         //这个就是consumer 序列化的MyContent
@@ -116,12 +118,8 @@ public class MyRPCTest {
                                         Class<?> clazz = c.getClass();
                                         Object res = null;
                                         try {
-
-
                                             Method m = clazz.getMethod(method, myContent.getParameterTypes());
                                             res = m.invoke(c, myContent.getArgs());
-
-
                                         } catch (NoSuchMethodException e) {
                                             e.printStackTrace();
                                         } catch (IllegalAccessException e) {
@@ -129,8 +127,6 @@ public class MyRPCTest {
                                         } catch (InvocationTargetException e) {
                                             e.printStackTrace();
                                         }
-
-
                                         MyContent resContent = new MyContent();
                                         resContent.setRes(res);
                                         byte[] contentByte = SerDerUtil.ser(resContent);
@@ -139,16 +135,13 @@ public class MyRPCTest {
                                                 HttpResponseStatus.OK,
                                                 Unpooled.copiedBuffer(contentByte));
 
+                                        //服务端响应给客户端的时候也要设置响应体的长度，否则客户端拿到响应，但是解析不了.
                                         response.headers().set(HttpHeaderNames.CONTENT_LENGTH,contentByte.length);
 
                                         //http协议，header+body
                                         ctx.writeAndFlush(response);
-
-
                                     }
                                 });
-
-
                     }
                 }).bind(new InetSocketAddress("localhost", 9090));
         try {
@@ -163,6 +156,14 @@ public class MyRPCTest {
 
     @Test
     public void startHttpServer(){
+        /*
+        *   客户端不管是基于netty还是url方式发送数据，
+        *   总归都是使用的是http协议的来传输数据.
+        *   服务端收到都是http协议的报文.
+        *   服务端只要使用基于http协议的工具来解析包即可.
+        *   可以选择的产品有tomcat,jetty等.
+        *
+        * */
         MyCar car = new MyCar();
         MyFly fly = new MyFly();
 
@@ -172,7 +173,7 @@ public class MyRPCTest {
         dis.register(Fly.class.getName(), fly);
 
 
-        //tomcat jetty  【servlet】
+        //tomcat jetty ---> 内部使用的是【servlet】
         Server server = new Server(new InetSocketAddress("localhost", 9090));
         ServletContextHandler handler = new ServletContextHandler(server, "/");
         server.setHandler(handler);

@@ -98,7 +98,7 @@ public class ClientFactory{
                     @Override
                     protected void initChannel(NioSocketChannel ch) throws Exception {
                         ChannelPipeline p = ch.pipeline();
-                        p.addLast(new HttpClientCodec())
+                        p.addLast(new HttpClientCodec())//客户端的编解码.
                                 .addLast(new HttpObjectAggregator(1024 * 512))
                                 .addLast(new ChannelInboundHandlerAdapter() {
                                     @Override
@@ -134,35 +134,31 @@ public class ClientFactory{
                     Unpooled.copiedBuffer(data)
             );
 
+            //客户端在发送的时候，需要将content的长度封装到请求中，否则，服务端在接收的时候，解析不到请求体.
             request.headers().set(HttpHeaderNames.CONTENT_LENGTH,data.length);
 
-            clientChannel.writeAndFlush(request).sync();//作为client 向server端发送：http  request
+            clientChannel.writeAndFlush(request).sync();//作为client 向server端发送：http  request:就是发送的过程.
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-
-
-
-
-
-
-
-
-
-
     }
 
     private static void urlTS(MyContent content, CompletableFuture<Object> res) {
 
-        //这种方式是每请求占用一个连接的方式，因为使用的是http协议
+        //这种方式是每请求占用一个连接的方式，因为使用的是http协议:http协议是无状态的，随用随关.
         Object obj = null;
         try {
+            /*
+            *   当有多个请求过来时，会为每个请求创建一个连接.
+            *   不会复用连接.
+            *
+            * */
             URL url = new URL("http://localhost:9090/");
 
             HttpURLConnection hc = (HttpURLConnection) url.openConnection();
 
             //post
-            hc.setRequestMethod("POST");
+            hc.setRequestMethod("POST");//表示请求时POST
             hc.setDoOutput(true);
             hc.setDoInput(true);
 
@@ -171,16 +167,12 @@ public class ClientFactory{
             ObjectOutputStream oout = new ObjectOutputStream(out);
             oout.writeObject(content);  //这里真的发送了嘛？
 
-            if(hc.getResponseCode() == 200){
+            if(hc.getResponseCode() == 200){//这一步才是真正的发送数据.
                 InputStream in = hc.getInputStream();
                 ObjectInputStream oin = new ObjectInputStream(in);
                 MyContent myContent = (MyContent) oin.readObject();
                 obj =  myContent.getRes();
-
             }
-
-
-
         } catch (MalformedURLException e) {
             e.printStackTrace();
         } catch (IOException e) {
@@ -188,20 +180,22 @@ public class ClientFactory{
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
-
-
-        res.complete(obj);
-
+        res.complete(obj);//这个方法会被阻塞住
     }
 
 
     //一个consumer 可以连接很多的provider，每一个provider都有自己的pool  K,V
-
     ConcurrentHashMap<InetSocketAddress, ClientPool> outboxs = new ConcurrentHashMap<>();
-
-
-
-
+    /**
+     * 并发情况下，会有很多客户端来请求数据，所以，需要对该方法的性能有所考虑。
+     * 如果，对整个方法加锁，把所有获取连接的操作都会变成串行化的，会比较影响性能。
+     * 但是有的时候，是需要考虑并发的影响的。
+     * 这样的话，可以将代码的锁的粒度变小一点.
+     *
+     * 只有真正的连接池不存在的时候，还有连接池存在但是池子里面没有连接的时候，才加锁的去创建连接池和连接.
+     * @param address
+     * @return
+     */
     public  NioSocketChannel getClient(InetSocketAddress address){
 
         //TODO 在并发情况下一定要谨慎

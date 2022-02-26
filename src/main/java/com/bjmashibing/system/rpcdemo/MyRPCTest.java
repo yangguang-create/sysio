@@ -63,6 +63,10 @@ public class MyRPCTest {
     //多多包涵，如果一会翻车，请不要打脸。。。。。
 
 
+    /*
+    *
+    *   使用netty的方式在服务端进行数据处理
+    * */
     @Test
     public void startServer() {
 
@@ -154,6 +158,9 @@ public class MyRPCTest {
     }
 
 
+    /*
+    *   使用jetty在服务端进行数据处理
+    * */
     @Test
     public void startHttpServer(){
         /*

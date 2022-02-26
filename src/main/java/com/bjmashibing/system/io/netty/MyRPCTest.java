@@ -224,7 +224,7 @@ public class MyRPCTest {
         Myheader header = new Myheader();
         int size = msg.length;
         int f = 0x14141414;
-        long requestID =  Math.abs(UUID.randomUUID().getLeastSignificantBits());
+        long requestID =  Math.abs(UUID.randomUUID().getLeastSignificantBits());//传递过去的时候，使用这个ID，传回来的时候使用的也是这个ID.
         //0x14  0001 0100
         header.setFlag(f);
         header.setDataLen(size);
@@ -562,7 +562,7 @@ class Myheader implements Serializable{
 
      */
     int flag;  //32bit可以设置很多信息。。。
-    long requestID;
+    long requestID;//基于自定义的header来实现有状态的协议.
     long dataLen;
 
 
